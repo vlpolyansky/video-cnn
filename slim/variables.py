@@ -219,6 +219,10 @@ def variable(name, shape=None, dtype=tf.float32, initializer=None,
   collections = set(list(collections or []) + default_collections(name,
                                                                   restore))
   with tf.device(device):
-    return tf.get_variable(name, shape=shape, dtype=dtype,
+    var = tf.get_variable(name, shape=shape, dtype=dtype,
                            initializer=initializer, #regularizer=regularizer,
                            trainable=trainable, collections=collections)
+    reg_op = regularizer(var) if (regularizer is not None) else None
+    if reg_op is not None:
+       tf.add_to_collection('losses', reg_op)
+    return var
