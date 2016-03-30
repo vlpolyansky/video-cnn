@@ -77,7 +77,7 @@ from __future__ import print_function
 
 import tensorflow as tf
 
-import scopes
+from inception.slim import scopes
 
 # Collection containing all the variables created using slim.variables
 VARIABLES_COLLECTION = '_variables_'
@@ -219,10 +219,6 @@ def variable(name, shape=None, dtype=tf.float32, initializer=None,
   collections = set(list(collections or []) + default_collections(name,
                                                                   restore))
   with tf.device(device):
-    var = tf.get_variable(name, shape=shape, dtype=dtype,
-                           initializer=initializer, #regularizer=regularizer,
+    return tf.get_variable(name, shape=shape, dtype=dtype,
+                           initializer=initializer, regularizer=regularizer,
                            trainable=trainable, collections=collections)
-    reg_op = regularizer(var) if (regularizer is not None) else None
-    if reg_op is not None:
-       tf.add_to_collection('losses', reg_op)
-    return var
