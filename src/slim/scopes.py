@@ -19,7 +19,7 @@
 
   Example of how to use scopes.arg_scope:
 
-  with slim.arg_scope(ops.conv2d, padding='SAME',
+  with slim_.arg_scope(ops.conv2d, padding='SAME',
                       stddev=0.01, weight_decay=0.0005):
     net = ops.conv2d(inputs, 64, [11, 11], 4, padding='VALID', scope='conv1')
     net = ops.conv2d(net, 256, [5, 5], scope='conv2')

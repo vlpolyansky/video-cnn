@@ -26,15 +26,12 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-
-
+import slim.losses as losses
 import tensorflow as tf
-
+import slim.variables as variables
 from tensorflow.python.training import moving_averages
 
-from inception.slim import losses
-from inception.slim import scopes
-from inception.slim import variables
+import slim.scopes as scopes
 
 # Used to keep the update ops done by batch_norm.
 UPDATE_OPS_COLLECTION = '_update_ops_'

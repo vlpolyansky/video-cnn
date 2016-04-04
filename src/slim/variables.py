@@ -30,37 +30,37 @@ Usage:
 
   # More complex example.
 
-  net = slim.ops.conv2d(input, 32, [3, 3], scope='conv1')
-  net = slim.ops.conv2d(net, 64, [3, 3], scope='conv2')
-  with slim.arg_scope(variables.Variables, restore=False):
-    net = slim.ops.conv2d(net, 64, [3, 3], scope='conv3')
+  net = slim_.ops.conv2d(input, 32, [3, 3], scope='conv1')
+  net = slim_.ops.conv2d(net, 64, [3, 3], scope='conv2')
+  with slim_.arg_scope(variables.Variables, restore=False):
+    net = slim_.ops.conv2d(net, 64, [3, 3], scope='conv3')
 
   # Get all model variables from all the layers.
-  model_variables = slim.variables.get_variables()
+  model_variables = slim_.variables.get_variables()
 
   # Get all model variables from a specific the layer, i.e 'conv1'.
-  conv1_variables = slim.variables.get_variables('conv1')
+  conv1_variables = slim_.variables.get_variables('conv1')
 
   # Get all weights from all the layers.
-  weights = slim.variables.get_variables_by_name('weights')
+  weights = slim_.variables.get_variables_by_name('weights')
 
   # Get all bias from all the layers.
-  biases = slim.variables.get_variables_by_name('biases')
+  biases = slim_.variables.get_variables_by_name('biases')
 
   # Get all variables in the VARIABLES_TO_RESTORE collection
   # (i.e. only those created by 'conv1' and 'conv2')
-  variables_to_restore = tf.get_collection(slim.variables.VARIABLES_TO_RESTORE)
+  variables_to_restore = tf.get_collection(slim_.variables.VARIABLES_TO_RESTORE)
 
 ************************************************
 * Initializing model variables from a checkpoint
 ************************************************
 
 # Create some variables.
-v1 = slim.variables.variable(name="v1", ..., restore=False)
-v2 = slim.variables.variable(name="v2", ...) # By default restore=True
+v1 = slim_.variables.variable(name="v1", ..., restore=False)
+v2 = slim_.variables.variable(name="v2", ...) # By default restore=True
 ...
 # The list of variables to restore should only contain 'v2'.
-variables_to_restore = tf.get_collection(slim.variables.VARIABLES_TO_RESTORE)
+variables_to_restore = tf.get_collection(slim_.variables.VARIABLES_TO_RESTORE)
 restorer = tf.train.Saver(variables_to_restore)
 with tf.Session() as sess:
   # Restore variables from disk.
@@ -74,15 +74,14 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-
 import tensorflow as tf
 
-from inception.slim import scopes
+import slim.scopes as scopes
 
-# Collection containing all the variables created using slim.variables
+# Collection containing all the variables created using slim_.variables
 VARIABLES_COLLECTION = '_variables_'
 
-# Collection containing all the slim.variables that are marked to_restore
+# Collection containing all the slim_.variables that are marked to_restore
 VARIABLES_TO_RESTORE = '_variables_to_restore_'
 
 
