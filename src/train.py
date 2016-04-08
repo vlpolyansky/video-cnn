@@ -96,7 +96,7 @@ def train(build_net_m, get_train_data_m, get_test_data_m, iter_n=10000000, init_
     step = slim.variables.variable('step', [], tf.int32, tf.constant_initializer(0), trainable=False)
 
     images1_ph, images2_ph, labels_ph = create_input_placeholders([None, None, 3])
-    net_op = build_net_m(images1_ph, images2_ph, trainable=True)
+    net_op = build_net_m(images1_ph, images2_ph, is_training=True)
 
     _ = build_loss(net_op, labels_ph)
     total_loss, loss_summary = get_total_loss(tf.get_collection(slim.losses.LOSSES_COLLECTION))

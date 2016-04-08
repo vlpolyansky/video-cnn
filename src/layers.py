@@ -11,14 +11,9 @@ from utils import *
 TILE_SIZE = 128
 
 
-def showarray(a, name='tmp.png', fmt='png'):
-    a = np.uint8(np.clip(a, 0, 1)*255)[0]
-    # if name is None:
-    #     f = StringIO()
-    #     PIL.Image.fromarray(a).save(f, fmt)
-    #     display(Image(data=f.getvalue()))
-    # else:
-    PIL.Image.fromarray(a).save(name, fmt)
+
+def float_to_uint(a):
+    return np.uint8(np.clip(a, 0, 1) * 255)
 
 
 def visstd(a, s=0.1):
@@ -68,7 +63,7 @@ def calc_grad_tiled(img1, img2, t_grad, images1_ph, images2_ph, tile_size=TILE_S
 
 def prepare_graph(build_net_m, save_dir):
     images1_ph, images2_ph, labels_ph = train.create_input_placeholders([None, None, 3])
-    net_op = build_net_m(images1_ph, images2_ph, trainable=True)
+    net_op = build_net_m(images1_ph, images2_ph, is_training=False)
 
     init = tf.initialize_all_variables()
 
@@ -107,6 +102,6 @@ def prepare_graph(build_net_m, save_dir):
             my_print('\r')
             # showarray(visstd(np.concatenate((img1, img2), 2)))
         my_print('\r')
-        return visstd(np.concatenate((img1[0], img2[0]), 1))
+        return float_to_uint(visstd(np.concatenate((img1[0], img2[0]), 1)))
 
     return maximize_output

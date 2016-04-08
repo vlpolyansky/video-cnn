@@ -85,13 +85,13 @@ def normalize_images(images1, images2):
     return (images1 - mean1), (images2 - mean1)
 
 
-def build_net(images1, images2, trainable=True):
+def build_net(images1, images2, is_training=True):
     images1, images2 = normalize_images(images1, images2)
     images = tf.concat(3, [images1, images2])
 
     wd = 0
 
-    with slim.arg_scope([slim.ops.conv2d], stddev=0.01, weight_decay=wd, trainable=trainable):
+    with slim.arg_scope([slim.ops.conv2d], stddev=0.01, weight_decay=wd, is_training=is_training):
         net = slim.ops.repeat_op(1, images, slim.ops.conv2d, 48, [3, 3], scope='conv1')
         net = slim.ops.max_pool(net, [2, 2], scope='pool1')
         net = tf.nn.lrn(net, name='lrn1')

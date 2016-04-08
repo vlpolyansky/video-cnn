@@ -14,6 +14,7 @@ BATCH_SIZE = 16
 def _create_fname_producers(data_dir):
     lines = [os.path.join(data_dir, str(i) + ".png") + " " + os.path.join(data_dir, str(i + 1) + ".png")
              for i in range(len(os.listdir(data_dir)) - 1)]
+    # lines = lines[:10 * (len(lines) / 20)] # remove frames with little changes
     shuffle(lines)
     cnt = len(lines)
     p = 0.9
@@ -87,14 +88,14 @@ def normalize_images(images1, images2):
     return (images1 - mean1), (images2 - mean1)
 
 
-def build_net(images1, images2, trainable=True):
+def build_net(images1, images2, is_training=True):
     images1, images2 = normalize_images(images1, images2)
     images = tf.concat(3, [images1, images2])
 
 
     wd = 0
 
-    with slim.arg_scope([slim.ops.conv2d], stddev=0.01, weight_decay=wd, trainable=trainable):
+    with slim.arg_scope([slim.ops.conv2d], stddev=0.1, weight_decay=wd, is_training=is_training):
         net = slim.ops.repeat_op(1, images, slim.ops.conv2d, 8, [3, 3], scope='conv1')
         net = slim.ops.max_pool(net, [2, 2], scope='pool1')
         net = tf.nn.lrn(net, name='lrn1')
@@ -105,15 +106,15 @@ def build_net(images1, images2, trainable=True):
 
         net = slim.ops.repeat_op(1, net, slim.ops.conv2d, 32, [3, 3], scope='conv3')
         net = slim.ops.max_pool(net, [2, 2], scope='pool3')
-        # net = tf.nn.lrn(net, name='lrn3')
+        net = tf.nn.lrn(net, name='lrn3')
 
-        net = slim.ops.repeat_op(1, net, slim.ops.conv2d, 64, [3, 3], scope='conv4')
+        net = slim.ops.repeat_op(2, net, slim.ops.conv2d, 64, [3, 3], scope='conv4')
         net = slim.ops.max_pool(net, [2, 2], scope='pool4')
         net = tf.nn.lrn(net, name='lrn4')
 
-        net = slim.ops.repeat_op(1, net, slim.ops.conv2d, 128, [3, 3], scope='conv5')
+        net = slim.ops.repeat_op(2, net, slim.ops.conv2d, 128, [3, 3], scope='conv5')
         net = slim.ops.max_pool(net, [2, 2], scope='pool5')
-        # net = tf.nn.lrn(net, name='lrn5')
+        net = tf.nn.lrn(net, name='lrn5')
 
         net = slim.ops.repeat_op(1, net, slim.ops.conv2d, 2, [3, 3], activation=None, scope='conv6')
 
