@@ -88,7 +88,7 @@ def save_model(saver, sess, path):
 
 
 def train(build_net_m, get_train_data_m, get_test_data_m, iter_n=10000000, init_rate=0.0001, logs_dir='logs_tmp/',
-          save_dir='save_tmp/', need_load=False):
+          save_dir='save_tmp/', need_load=False, test_only=False):
     create_dir(logs_dir)
     create_dir(save_dir)
     save_file_path = os.path.join(save_dir, 'model.ckpt')
@@ -122,7 +122,7 @@ def train(build_net_m, get_train_data_m, get_test_data_m, iter_n=10000000, init_
     my_print("Starting...\n")
 
     for i in range(0, iter_n):
-        if i % 11 == 0:
+        if i % 11 == 0 or test_only:
             # Test
             im1, im2, lab = get_test_data_m()
             feed = {

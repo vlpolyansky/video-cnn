@@ -3,7 +3,7 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 
 import layers
-import kingstreet
+import movie
 
 
 def main():
@@ -18,8 +18,8 @@ def main():
     sess = tf.Session()
 
     with sess.as_default():
-        maximize_output_multi = layers.prepare_graph(kingstreet.build_net, save_dir)
-        result = maximize_output_multi(layer, channel, octave_n=4, iter_n=1000, step=1.0, seed=123)
+        maximize_output_multi = layers.prepare_graph(movie.build_net, save_dir)
+        result = maximize_output_multi(layer, channel, octave_n=4, iter_n=500, step=1.0, seed=123)
 
     plt.imshow(result)
     plt.show()

@@ -1,33 +1,40 @@
 import tensorflow as tf
-from random import shuffle
 
 from utils import *
 import slim
 
 
-# IMAGE_SHAPE = [405, 720, 3]
-IMAGE_SHAPE = [432, 768, 3]
-BATCH_SIZE = 16
+IMAGE_SHAPE = [160, 384, 3]
+BATCH_SIZE = 32
+FRAME_WINDOW = 3
+FRAME_PACK_SIZE = 150
 
 
 # INPUT
 
 def _create_fname_producers(data_dir):
-    lines = [os.path.join(data_dir, str(i) + ".png") + " " + os.path.join(data_dir, str(i + 1) + ".png")
-             for i in range(len(os.listdir(data_dir)) - 1)]
-    # lines = lines[:10 * (len(lines) / 20)] # remove frames with little changes
-    shuffle(lines)
+    k = FRAME_WINDOW
+    lines = [os.path.join(data_dir, str(i) + ".png") + " " + os.path.join(data_dir, str(i + k) + ".png")
+             for i in range(len(os.listdir(data_dir)) - k - 1)]  # 1 is for info.txt
+    lines = np.array(lines)
+    lines = lines[:39000]  # remove captions
+    mask = np.empty_like(lines, dtype=bool)
+    p = 0.8
+    for i in range(0, len(mask), FRAME_PACK_SIZE):
+        c = randfloat(0, 1) < p
+        mask[i: min(i + FRAME_PACK_SIZE, len(mask))] = c
+    # shuffle(lines)
+    train_lines = list(lines[mask == True])
+    test_lines = list(lines[mask == False])
     cnt = len(lines)
-    p = 0.9
-    train_cnt = int(cnt * p)
+    train_cnt = len(train_lines)
     my_print("Total: %i images, train: %i\n" % (cnt, train_cnt))
-    train_lines = lines[:train_cnt]
-    test_lines = lines[train_cnt:]
+
     return tf.train.string_input_producer(train_lines), tf.train.string_input_producer(test_lines)
 
 
 def _read_images(paths):
-    with tf.name_scope("read_image_and_label"):
+    with tf.name_scope("read_images"):
         path1, path2 = tf.decode_csv(paths, [[""], [""]], field_delim=" ")
         file_content1 = tf.read_file(path1)
         file_content2 = tf.read_file(path2)
@@ -102,25 +109,20 @@ def build_net(images1, images2, is_training=True):
     wd = 0
 
     with slim.arg_scope([slim.ops.conv2d], stddev=0.1, weight_decay=wd, is_training=is_training):
-        net = slim.ops.repeat_op(1, images, slim.ops.conv2d, 8, [3, 3], scope='conv1')
+        net = slim.ops.repeat_op(1, images, slim.ops.conv2d, 16, [3, 3], batch_norm_params={}, scope='conv1')
         net = slim.ops.max_pool(net, [2, 2], scope='pool1')
-        net = tf.nn.lrn(net, name='lrn1')
 
-        net = slim.ops.repeat_op(1, net, slim.ops.conv2d, 16, [3, 3], scope='conv2')
+        net = slim.ops.repeat_op(1, net, slim.ops.conv2d, 32, [3, 3], batch_norm_params={}, scope='conv2')
         net = slim.ops.max_pool(net, [2, 2], scope='pool2')
-        net = tf.nn.lrn(net, name='lrn2')
 
-        net = slim.ops.repeat_op(1, net, slim.ops.conv2d, 32, [3, 3], scope='conv3')
+        net = slim.ops.repeat_op(1, net, slim.ops.conv2d, 64, [3, 3], batch_norm_params={}, scope='conv3')
         net = slim.ops.max_pool(net, [2, 2], scope='pool3')
-        net = tf.nn.lrn(net, name='lrn3')
 
-        net = slim.ops.repeat_op(2, net, slim.ops.conv2d, 64, [3, 3], scope='conv4')
+        net = slim.ops.repeat_op(1, net, slim.ops.conv2d, 128, [3, 3], batch_norm_params={}, scope='conv4')
         net = slim.ops.max_pool(net, [2, 2], scope='pool4')
-        net = tf.nn.lrn(net, name='lrn4')
 
-        net = slim.ops.repeat_op(2, net, slim.ops.conv2d, 128, [3, 3], scope='conv5')
+        net = slim.ops.repeat_op(2, net, slim.ops.conv2d, 256, [3, 3], batch_norm_params={}, scope='conv5')
         net = slim.ops.max_pool(net, [2, 2], scope='pool5')
-        net = tf.nn.lrn(net, name='lrn5')
 
         net = slim.ops.repeat_op(1, net, slim.ops.conv2d, 2, [3, 3], activation=None, scope='conv6')
 

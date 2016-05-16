@@ -8,7 +8,7 @@ import slim
 from utils import *
 
 
-TILE_SIZE = 128
+TILE_SIZE = 512
 
 
 
@@ -18,7 +18,7 @@ def float_to_uint(a):
 
 def visstd(a, s=0.1):
     '''Normalize the image range for visualization'''
-    return (a-a.mean())/max(a.std(), 1e-4)*s + 0.5
+    return (a - a.mean()) / max(a.std(), 1e-4) * s + 0.5
 
 
 def tffunc(*argtypes):
@@ -99,7 +99,7 @@ def prepare_graph(build_net_m, save_dir):
                 img1 += g1 * step
                 img2 += g2 * step
                 my_print(' .')
-            my_print('\r')
+            my_print('\n')
             # showarray(visstd(np.concatenate((img1, img2), 2)))
         my_print('\r')
         return float_to_uint(visstd(np.concatenate((img1[0], img2[0]), 1)))

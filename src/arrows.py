@@ -2,6 +2,7 @@ import tensorflow as tf
 
 from utils import *
 import slim
+from gan import deconv2d
 
 
 IMAGE_SIZE = 128
@@ -32,36 +33,43 @@ def _read_image(path):
     return image1, image2
 
 
-def _generate_batch(image1, image2, batch_size, min_after_dequeue):
+def _generate_batch(image1, image2, batch_size, doubled, min_after_dequeue):
     with tf.name_scope("generate_batch"):
-        images1, images2 = tf.train.shuffle_batch([image1, image2], batch_size=batch_size / 2,
-                                                  capacity=min_after_dequeue + batch_size * 4,
-                                                  min_after_dequeue=min_after_dequeue,
-                                                  num_threads=1)
+        if doubled:
+            images1, images2 = tf.train.shuffle_batch([image1, image2], batch_size=batch_size / 2,
+                                                      capacity=min_after_dequeue + batch_size * 4,
+                                                      min_after_dequeue=min_after_dequeue,
+                                                      num_threads=3)
 
-        images12 = tf.concat(0, [images1, images2])
-        images21 = tf.concat(0, [images2, images1])
-        labels12 = tf.concat(0, [tf.constant(1, tf.int64, [batch_size / 2]),
-                                 tf.constant(0, tf.int64, [batch_size / 2])])
+            images12 = tf.concat(0, [images1, images2])
+            images21 = tf.concat(0, [images2, images1])
+            labels12 = tf.concat(0, [tf.constant(1, tf.int64, [batch_size / 2]),
+                                     tf.constant(0, tf.int64, [batch_size / 2])])
+        else:
+            images12, images21 = tf.train.shuffle_batch([image1, image2], batch_size=batch_size,
+                                                      capacity=min_after_dequeue + batch_size * 4,
+                                                      min_after_dequeue=min_after_dequeue,
+                                                      num_threads=3)
+            labels12 = tf.constant(1, tf.int64, [batch_size])
     return images12, images21, labels12
 
 
-def _producer_to_batch(queue, min_after_dequeue=500):
+def _producer_to_batch(queue, batch_size, doubled, min_after_dequeue=100):
     image1, image2 = _read_image(queue.dequeue())
-    images1, images2, labels = _generate_batch(image1, image2, BATCH_SIZE,
+    images1, images2, labels = _generate_batch(image1, image2, batch_size, doubled,
                                                min_after_dequeue=min_after_dequeue)
     return images1, images2, labels
 
 
-def _get_data_batches(data_dir):
+def _get_data_batches(data_dir, batch_size, doubled):
     train_queue, test_queue = _create_fname_producers(data_dir)
-    return _producer_to_batch(train_queue) + \
-        _producer_to_batch(test_queue, BATCH_SIZE)
+    return _producer_to_batch(train_queue, batch_size, doubled) + \
+        _producer_to_batch(test_queue, batch_size, doubled, batch_size)
 
 
-def get_input_producers(data_dir):
+def get_input_producers(data_dir, batch_size=BATCH_SIZE, doubled=True):
     images1_train, images2_train, labels_train, images1_test, images2_test, labels_test = \
-        _get_data_batches(data_dir)
+        _get_data_batches(data_dir, batch_size=batch_size, doubled=doubled)
 
     def producer(images1, images2, labels):
             def produce():
@@ -112,5 +120,89 @@ def build_net(images1, images2, is_training=True):
 
         net = tf.reduce_mean(net, reduction_indices=[1, 2], name="reduce")
         net = tf.nn.softmax(net, name="softmax")
+
+    return net
+
+
+# GAN
+
+def gan_generator(images):
+    wd = 0
+
+    net = images
+
+    with tf.variable_scope('generator'):
+
+        with slim.arg_scope([slim.ops.conv2d, deconv2d], stddev=0.1, weight_decay=wd,
+                            is_training=True):
+
+            net = conv1 = slim.ops.conv2d(net, 32, [3, 3], batch_norm_params={}, scope='conv1')
+            net = pool1 = slim.ops.max_pool(net, [2, 2], scope='pool1')
+
+            net = conv2 = slim.ops.conv2d(net, 64, [3, 3], batch_norm_params={}, scope='conv2')
+            net = pool2 = slim.ops.max_pool(net, [2, 2], scope='pool2')
+
+            net = conv3 = slim.ops.conv2d(net, 128, [3, 3], batch_norm_params={}, scope='conv3')
+            net = pool3 = slim.ops.max_pool(net, [2, 2], scope='pool3')
+
+            net = conv4 = slim.ops.conv2d(net, 256, [3, 3], batch_norm_params={}, scope='conv4')
+            # net = pool4 = slim.ops.max_pool(net, [2, 2], scope='pool4')
+
+            # net = conv5 = slim.ops.conv2d(net, 128, [3, 3], batch_norm_params={}, scope='conv5')
+            # net = pool5 = slim.ops.max_pool(net, [2, 2], scope='pool5')
+
+            # print net.get_shape()
+
+            # net = deconv2d(net, [3, 3], conv4.get_shape(), batch_norm_params={}, scope='deconv5')
+            # print net.get_shape()
+
+            # net = tf.concat(3, [net, conv4], name='concat4')
+            net = deconv2d(net, [3, 3], conv3.get_shape(), batch_norm_params={}, scope='deconv4')
+            # print net.get_shape()
+
+            net = tf.concat(3, [net, conv3], name='concat3')
+            net = deconv2d(net, [3, 3], conv2.get_shape(), batch_norm_params={}, scope='deconv3')
+            # print net.get_shape()
+
+            net = tf.concat(3, [net, conv2], name='concat2')
+            net = deconv2d(net, [3, 3], images.get_shape(), scope='deconv2')
+            # print net.get_shape()
+
+            # net = tf.concat(3, [net, pool1], name='concat1')
+            # net = deconv2d(net, [3, 3], images.get_shape(), activation=None, scope='deconv1')
+            # print net.get_shape()
+
+    return net
+
+
+def gan_discriminator(images1, images2, reuse=False):
+    wd = 0
+
+    images = tf.concat(3, [images1, images2])
+    net = images
+
+    with tf.variable_scope('discriminator'):
+
+        with slim.arg_scope([slim.ops.conv2d], stddev=0.1, weight_decay=wd, is_training=True):
+
+            if reuse:
+                tf.get_variable_scope().reuse_variables()
+
+            net = slim.ops.repeat_op(1, net, slim.ops.conv2d, 32, [3, 3], batch_norm_params={}, scope='conv1')
+            net = slim.ops.max_pool(net, [2, 2], scope='pool1')
+
+            net = slim.ops.repeat_op(1, net, slim.ops.conv2d, 64, [3, 3], batch_norm_params={}, scope='conv2')
+            net = slim.ops.max_pool(net, [2, 2], scope='pool2')
+
+            net = slim.ops.repeat_op(1, net, slim.ops.conv2d, 128, [3, 3], batch_norm_params={}, scope='conv3')
+            net = slim.ops.max_pool(net, [2, 2], scope='pool3')
+
+            net = slim.ops.repeat_op(1, net, slim.ops.conv2d, 256, [3, 3], batch_norm_params={}, scope='conv4')
+            net = slim.ops.max_pool(net, [2, 2], scope='pool4')
+
+            net = slim.ops.repeat_op(1, net, slim.ops.conv2d, 1, [3, 3], activation=None, scope='conv5')
+
+            net = tf.reduce_mean(net, reduction_indices=[1, 2, 3], name='reduce')
+            # net = tf.nn.sigmoid(net)
 
     return net
